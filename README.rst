@@ -1,7 +1,7 @@
 C++ version of this code has been taken from 
 https://bitbucket.org/sreangsu/libpav/.
 
-Idea is to write a scalable/distributed version of it using scala.
+Idea is to write a scalable/distributed version of it using spark.
 
 ======================================================================
 Comments From C++ Version:
