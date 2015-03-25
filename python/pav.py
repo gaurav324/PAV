@@ -15,6 +15,9 @@
 # I have tried to take a lot of code from here.
 #
 
+# Sample Command
+# ~/spark-1.3.0/bin/spark-submit pav.py --file ../TestData/thousand.txt
+
 from optparse import OptionParser
 from pyspark import SparkContext
 
