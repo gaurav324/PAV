@@ -15,12 +15,16 @@
 # I have tried to take a lot of code from here.
 #
 
+from optparse import OptionParser
+from pyspark import SparkContext
+
 def pool(input, l, r):
     # TODO: Change to use the weighted average.
     new_point = sum(input[l: r+1], 0.0) / (r-l+1)
     for i in range(l, r+1):
         input[i] = new_point
 
+count = 0
 def poolAdjacentViolators(input):
     """
     Main function to solve the run pool adjacent violator algorithm 
@@ -32,7 +36,10 @@ def poolAdjacentViolators(input):
     [1, 7.8, 7.8, 7.8, 7.8, 7.8, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002]
     
     """ 
-
+    global count
+    count += 1
+    print "Count: ", count, " and size is ", len(input)  ,"\n"
+    input = map(lambda x: float(x), input)
     i = 0
     while(i < len(input)):
         j = i
@@ -55,8 +62,31 @@ def poolAdjacentViolators(input):
             i = j
 
     return input
-    return [1.0, 7.8, 7.8, 7.8, 7.8, 7.8, 9.375, 9.375, 9.375, 9.375, 9.375, 9.375, 9.375, 9.375]
+
+def parallelPoolAdjacentViolators(input):
+    parallelResult = input.glom().flatMap(poolAdjacentViolators).collect()
+    poolAdjacentViolators(parallelResult)    
+    #print parallelResult
+
+def get_opts():
+    parser = OptionParser()
+    parser.add_option("--serial", action="store_true", dest="serial", default=False)
+    parser.add_option("--file", dest="filename")
+
+    (options, args) = parser.parse_args()
+    return options, args
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+    #import doctest
+    #doctest.testmod()
+    #textData = sc.parallelize([1, 11, 8, 7, 6, 7, 13, 12, 11, 8, 9, 10, 4, 8])
+    opts, args = get_opts()
+    if opts.serial:
+        f = open(opts.filename, "r")
+        lines = f.readlines()
+        lines = map(lambda x: float(x.strip()), lines)
+        print poolAdjacentViolators(lines)
+    else:
+        sc = SparkContext("local", "PAV")
+        textData = sc.textFile(opts.filename, use_unicode=False)
+        parallelPoolAdjacentViolators(textData)
