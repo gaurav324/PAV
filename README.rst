@@ -3,6 +3,20 @@ https://bitbucket.org/sreangsu/libpav/.
 
 Idea is to write a scalable/distributed version of it using spark.
 
+=======
+Execute Spark version of PAV:
+
+Steps to Run Spark Standalone cluster and execute PAV algoritm.
+
+1) Start master. This would start the standalone mode.
+ - ./sbin/start-master.sh
+2) Start Workers. Execute the following command at multiple terminals. Monitor status at http://localhost:8080/
+ - ./bin/spark-class org.apache.spark.deploy.worker.Worker spark://nanda-saab:7077 
+3) Submit a job to this cluster. Make patitions to be same as the number of the worker threads.
+ - ~/spark-1.3.0/bin/spark-submit --master spark://nanda-saab:7077 
+   pav.py --file ~/PAV/libpav/TestData/dataset_100000 --partitions 4 
+
+If you don't want to start master and slaves and just test, simply remove the --master option.
 ======================================================================
 Comments From C++ Version:
 
