@@ -2,7 +2,9 @@
 Creates data set of the given size. Our intent is to
 produce dataset that looks like some kind of step function.
 
-First line of the dataset, tells the size.
+For --cpp files, first line of the dataset, tells the size.
+pav_tester.c uses size of dataset as the first element.
+
 """
 from optparse import OptionParser
 
@@ -10,11 +12,18 @@ import random, sys
 
 parser = OptionParser()
 parser.add_option("--random", action="store_true", dest="random", default=False)
+parser.add_option("--cpp", action="store_true", dest="cpp", default=False)
 opts, args = parser.parse_args()
 
 datasize = int(sys.argv[1])
+outfile_name = "dataset_" + str(datasize)
 
-datapoints = [str(datasize)]
+if opts.cpp:
+    datapoints = [str(datasize)]
+    outfile_name = "cpp_" + outfile_name
+else:
+    datapoints = []
+
 for i in range(datasize):
     if opts.random:
         x = random.randint(1, datasize)
@@ -23,9 +32,9 @@ for i in range(datasize):
     datapoints.append(str(x))
 
 if opts.random:
-    f = open("random_dataset_" + str(datasize), "w")
-else:
-    f = open("dataset_" + str(datasize), "w")
+    outfile_name = "random_" + outfile_name
+
+f = open(outfile_name, "w")
 f.write("\n".join(datapoints))
 f.close()
 

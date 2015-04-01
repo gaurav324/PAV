@@ -21,16 +21,9 @@
 import itertools
 
 from optparse import OptionParser
-#from pyspark import SparkContext
-
-def poolOld(input, l, r):
-    # TODO: Change to use the weighted average.
-    new_point = sum(input[l: r+1], 0.0) / (r-l+1)
-    for i in range(l, r+1):
-        input[i] = new_point
+from pyspark import SparkConf, SparkContext
 
 def pool(values, weights, l, r,):
-    #print values, weights, l, r
     new_point = sum(map(lambda x: values[x] * weights[x], range(l, r+1))) / sum(weights[l: r+1])
     values[l] = new_point
     weights[l] = sum(weights[l : r+1])
@@ -42,15 +35,19 @@ def poolAdjacentViolators(input):
     Main function to solve the pool adjacent violator algorithm
     on the given array of data.
 
+    This is a O(n) implementation. Trick is that while regersssing
+    if we see a violation, we average the numbers and instead of
+    storing them as two numbers, we store the number once and store
+    a corresponding weight. This way, for new numbers we don't have 
+    to go back for each n, but only one place behind and update the
+    corresponding weights.
     """
     input = map(lambda x: float(x), input)
     weights = []
     output = []
 
     index = 0
-    #print input
     while index < len(input):
-        #print "Enter: ", index, output, weights
         temp = index
         
         # Find monotonicity violating sequence, if any.   
@@ -64,7 +61,6 @@ def poolAdjacentViolators(input):
             output_end = output_beg + 1
             output.append(input[index])
             weights.append(1)
-            #print index, output, weights, output_beg, output_end
             index += 1
         else:
             # Pool the violating sequence, if after violating monotonicity 
@@ -73,86 +69,45 @@ def poolAdjacentViolators(input):
             output_end = output_beg + temp - index
             output.extend(input[index: temp+1])
             weights.extend([1] * (temp-index+1))
-            #print index, output, weights, output_beg, output_end
             index = temp + 1
 
+        # Fix the output to be in the increasing order.
         while output_beg >= 0 and output[output_beg] > output[output_beg + 1]:
             output, weights = pool(output, weights, output_beg, output_end)
             diff = (output_end - output_beg)
             output_beg -= 1
             output_end -= diff
             
-
-        #print "Exit: ", index, output, weights
-
     return list(itertools.chain(*map(lambda i: [output[i]] * weights[i] , range(len(weights)))))
-
-def poolAdjacentViolatorsOld(input):
-    """
-    Main function to solve the run pool adjacent violator algorithm 
-    on the given array of data.
-
-    >>> input = [1, 11, 8, 7, 6, 7, 13, 12, 11, 8, 9, 10, 4, 8]
-    >>> result = poolAdjacentViolators(input)
-    >>> print result
-    [1, 7.8, 7.8, 7.8, 7.8, 7.8, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002, 9.375000000000002]
-    
-    """ 
-    input = map(lambda x: float(x), input)
-    i = 0
-    while(i < len(input)):
-        j = i
-
-        # Find monotonicity violating sequence, if any.
-        while j < len(input) - 1 and input[j] > input[j+1]:
-
-            j += 1
-
-        # If monotonicity is not violated, move to next point.
-        if i == j:
-            i += 1
-        else:
-            # Pool the violating sequence, if after violating monotonicity 
-            # is broken, we need to go back again.
-            # TODO: I am not sure that how is this linear in time. 
-            while i >= 0 and input[i] > input[i + 1]:
-                poolOld(input, i, j)
-                i -= 1
-
-            i = j
-
-    return input
 
 def parallelPoolAdjacentViolators(input):
     parallelResult = input.glom().flatMap(poolAdjacentViolators).collect()
-    poolAdjacentViolators(parallelResult)    
-    #print parallelResult
+    parallelResult = poolAdjacentViolators(parallelResult)    
+    return parallelResult
 
 def get_opts():
     parser = OptionParser()
     parser.add_option("--serial", action="store_true", dest="serial", default=False)
     parser.add_option("--file", dest="filename")
     parser.add_option("--partitions", dest="partitions", default=1)
+    parser.add_option("--out", dest="output_file", default="output")
 
     (options, args) = parser.parse_args()
     return options, args
 
 if __name__ == "__main__":
-    #import doctest
-    #doctest.testmod()
-    #textData = sc.parallelize([1, 11, 8, 7, 6, 7, 13, 12, 11, 8, 9, 10, 4, 8])
     opts, args = get_opts()
     if opts.serial:
         f = open(opts.filename, "r")
         lines = f.readlines()
         f.close()
-        lines = map(lambda x: float(x.strip()), lines[1:])
-        result = poolAdjacentViolatorsOld(lines)
-        print result
-        #f = open("chakkde", "w")
-        #f.write(str(result))
-        #f.close()
+        result = poolAdjacentViolators(lines)
     else:
-        sc = SparkContext("local", "PAV")
+        conf = SparkConf().setAppName("PAV")
+        sc = SparkContext(conf=conf)
         textData = sc.textFile(opts.filename, use_unicode=False, minPartitions=int(opts.partitions))
-        parallelPoolAdjacentViolators(textData)
+        result = parallelPoolAdjacentViolators(textData)
+
+    f = open(opts.output_file, "w")
+    f.write(str(result))
+    f.close()
