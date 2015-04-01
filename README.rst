@@ -1,10 +1,4 @@
-C++ version of this code has been taken from 
-https://bitbucket.org/sreangsu/libpav/.
-
-Idea is to write a scalable/distributed version of it using spark.
-
-=======
-Execute Spark version of PAV:
+Python and Spark based scalable implementation of Pool adjacent Violator (PAV) for isotonic regression.
 
 Steps to Run Spark Standalone cluster and execute PAV algoritm.
 
@@ -17,8 +11,10 @@ Steps to Run Spark Standalone cluster and execute PAV algoritm.
    pav.py --file ~/PAV/libpav/TestData/dataset_100000 --partitions 4 
 
 If you don't want to start master and slaves and just test, simply remove the --master option.
+
 ======================================================================
-Comments From C++ Version:
+C++ version of this code has been taken from 
+https://bitbucket.org/sreangsu/libpav/.
 
 This code provides a templated function pav() that solves for x^* where: 
 
